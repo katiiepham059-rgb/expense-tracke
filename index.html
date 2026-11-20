@@ -5,13 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Expense Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top">
-  <div class="deco" aria-hidden="true">🌷 🌼 🌸</div>
-  <h1><em>the</em> expense tracker</h1>
+  <h1>Expense <em>Tracker</em></h1>
+  <nav class="views" id="views">
+    <button data-v="overview" class="on">Overview</button>
+    <button data-v="daily">Daily</button>
+  </nav>
   <div class="month-nav">
     <button id="prev" aria-label="Previous month">‹</button>
     <strong id="monthLabel"></strong>
@@ -19,7 +22,7 @@
   </div>
 </header>
 
-<main>
+<main id="viewOverview">
   <section class="cards" id="cards"></section>
 
   <section class="panel">
@@ -30,7 +33,6 @@
           <option value="earning">Earning (weekly income)</option>
           <option value="monthly">Monthly payment (recurring)</option>
           <option value="saving">Savings</option>
-          <option value="daily">Daily payment</option>
           <option value="unexpected">Unexpected charge</option>
         </select>
       </label>
@@ -85,7 +87,41 @@
     <button id="clearAll" class="danger">Clear all</button>
   </section>
 </main>
-<footer class="scallop-top">Data is stored only in your browser (localStorage).</footer>
+
+<main id="viewDaily" hidden>
+  <section class="panel">
+    <div class="row">
+      <div class="day-nav">
+        <button id="dayPrev" aria-label="Previous day">‹</button>
+        <strong id="dayLabel"></strong>
+        <button id="dayNext" aria-label="Next day">›</button>
+        <button id="dayToday">Today</button>
+      </div>
+      <div class="day-total"><small>Spent this day</small><b id="dayTotal">$0.00</b></div>
+    </div>
+    <form id="dayForm" class="dayform">
+      <label>Amount ($)
+        <input id="dAmount" type="number" min="0.01" step="0.01" required placeholder="0.00">
+      </label>
+      <label>What was it?
+        <input id="dNote" type="text" maxlength="80" placeholder="e.g. Coffee, Bus ticket">
+      </label>
+      <label>Category
+        <select id="dCat">
+          <option>Food</option><option>Coffee</option><option>Transport</option>
+          <option>Shopping</option><option>Health</option><option>Fun</option><option>Other</option>
+        </select>
+      </label>
+      <button type="submit" class="primary">Add payment</button>
+    </form>
+    <ul id="dayList" class="list"></ul>
+  </section>
+  <section class="grid2">
+    <div class="panel"><h2>Spending per day</h2><div id="dayChart"></div></div>
+    <div class="panel"><h2>Days this month</h2><ul id="dayHistory" class="list"></ul></div>
+  </section>
+</main>
+<footer>Data is stored only in your browser (localStorage).</footer>
 <script src="app.js"></script>
 </body>
 </html>

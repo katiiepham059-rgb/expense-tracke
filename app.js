@@ -19,6 +19,9 @@ let goal=Number(store.get(GOAL_KEY))||0;
 const now=new Date();
 let view={y:now.getFullYear(),m:now.getMonth()};
 let filter='all';
+let screen='overview';
+let day=iso0(now);
+function iso0(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 
 const pad=n=>String(n).padStart(2,'0');
 const iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -49,13 +52,13 @@ function render(){
   const list=monthEntries(view.y,view.m);
   const monday=mondayOf(now), weekEnd=new Date(monday);weekEnd.setDate(weekEnd.getDate()+7);
   const weekEarn=entries.filter(e=>{if(e.type!=='earning')return false;const d=parse(e.date);return d>=monday&&d<weekEnd}).reduce((s,e)=>s+e.amount,0);
-  const earn=sum(list,'earning'),mon=sum(list,'monthly'),sav=sum(list,'saving'),day=sum(list,'daily'),unx=sum(list,'unexpected');
+  const earn=sum(list,'earning'),mon=sum(list,'monthly'),sav=sum(list,'saving'),day_=sum(list,'daily'),unx=sum(list,'unexpected');
   const todaySpend=entries.filter(e=>e.type==='daily'&&e.date===today).reduce((s,e)=>s+e.amount,0);
-  const balance=earn-mon-day-unx-sav;
+  const balance=earn-mon-day_-unx-sav;
   const cards=[
     ['This week\'s earnings',weekEarn,'earning'],['Earnings (month)',earn,'earning'],
     ['Monthly payments',mon,'monthly'],['Savings',sav,'saving'],
-    ['Daily payments (month)',day,'daily'],['Today\'s spending',todaySpend,'daily'],
+    ['Daily payments (month)',day_,'daily'],['Today\'s spending',todaySpend,'daily'],
     ['Unexpected charges',unx,'unexpected'],['Balance',balance,balance<0?'unexpected':'earning']
   ];
   $('cards').innerHTML=cards.map(([l,v,t])=>`<div class="card ${t}" style="--c:${TYPES[t].color}"><small>${l}</small><b>${usd.format(v)}</b></div>`).join('');
@@ -103,7 +106,7 @@ function render(){
 
 const hints={earning:'Weekly income: add each payday; it is grouped by week (Mon–Sun).',
  monthly:'Recurring: repeats every month from this date until deleted.',
- saving:'Money set aside this month.',daily:'Everyday spending such as food or transport.',
+ saving:'Money set aside this month.',
  unexpected:'One-off surprises: repairs, fines, medical bills.'};
 const upd=()=>$('hint').textContent=hints[$('type').value];
 
@@ -134,11 +137,54 @@ $('importJson').addEventListener('change',async e=>{
   try{
     const d=JSON.parse(await f.text());
     if(!Array.isArray(d.entries))throw 0;
-    entries=d.entries.filter(x=>TYPES[x.type]&&x.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>({id:String(x.id||Math.random().toString(36).slice(2)),type:x.type,amount:+x.amount,date:x.date,note:String(x.note||'').slice(0,80)}));
+    entries=d.entries.filter(x=>TYPES[x.type]&&x.amount>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)).map(x=>({id:String(x.id||Math.random().toString(36).slice(2)),type:x.type,amount:+x.amount,date:x.date,note:String(x.note||'').slice(0,80),category:x.category?String(x.category).slice(0,20):undefined}));
     goal=Number(d.goal)||0;store.set(GOAL_KEY,goal);save();render();
   }catch{alert('Invalid backup file.')}
   e.target.value='';
 });
 $('clearAll').onclick=()=>{if(confirm('Delete ALL entries? This cannot be undone.')){entries=[];save();render()}};
 
-$('date').value=today;upd();render();
+// ---------- Daily screen ----------
+function renderDaily(){
+  const d=parse(day);
+  $('dayLabel').textContent=d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  const items=entries.filter(e=>e.type==='daily'&&e.date===day).reverse();
+  $('dayTotal').textContent=usd.format(items.reduce((s,e)=>s+e.amount,0));
+  $('dayList').innerHTML=items.length?items.map(e=>`<li><span class="dot" style="--c:${TYPES.daily.color}"></span>
+    <div class="grow"><span>${esc(e.note||e.category||'Payment')}</span><small>${esc(e.category||'Other')}</small></div>
+    <b>−${usd.format(e.amount)}</b><button class="del" data-id="${e.id}" aria-label="Delete">✕</button></li>`).join('')
+    :'<li class="empty">Nothing spent on this day yet.</li>';
+  // month by day
+  const y=d.getFullYear(),m=d.getMonth(),n=new Date(y,m+1,0).getDate();
+  const per=Array.from({length:n},(_,i)=>0);
+  for(const e of entries)if(e.type==='daily'){const x=parse(e.date);if(x.getFullYear()===y&&x.getMonth()===m)per[x.getDate()-1]+=e.amount}
+  const max=Math.max(1,...per),w=300/n;
+  $('dayChart').innerHTML=`<svg viewBox="0 0 320 120" width="100%" role="img" aria-label="Daily spending">`+per.map((v,i)=>{
+    const h=v/max*80;const sel=i+1===d.getDate();
+    return `<rect x="${10+i*w+1}" y="${95-h}" width="${Math.max(2,w-2)}" height="${Math.max(h,1)}" rx="2" fill="${sel?'var(--ink)':'var(--daily)'}"><title>${i+1}: ${usd.format(v)}</title></rect>`;
+  }).join('')+`<text x="10" y="112">1</text><text x="310" y="112" text-anchor="end">${n}</text></svg>`;
+  const rows=per.map((v,i)=>({v,i})).filter(r=>r.v>0).reverse();
+  $('dayHistory').innerHTML=rows.length?rows.map(r=>{const ds=`${y}-${pad(m+1)}-${pad(r.i+1)}`;
+    return `<li class="jump" data-day="${ds}"><div class="grow"><span>${new Date(y,m,r.i+1).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}</span></div><b>${usd.format(r.v)}</b></li>`}).join('')
+    :'<li class="empty">No daily payments this month.</li>';
+}
+function show(){
+  $('viewOverview').hidden=screen!=='overview';$('viewDaily').hidden=screen!=='daily';
+  document.querySelectorAll('#views button').forEach(b=>b.classList.toggle('on',b.dataset.v===screen));
+  $('monthLabel').parentElement.style.visibility=screen==='overview'?'visible':'hidden';
+  if(screen==='daily')renderDaily();else render();
+}
+$('views').addEventListener('click',e=>{if(e.target.dataset.v){screen=e.target.dataset.v;show()}});
+const shiftDay=n=>{const d=parse(day);d.setDate(d.getDate()+n);day=iso(d);renderDaily()};
+$('dayPrev').onclick=()=>shiftDay(-1);$('dayNext').onclick=()=>shiftDay(1);
+$('dayToday').onclick=()=>{day=today;renderDaily()};
+$('dayForm').addEventListener('submit',ev=>{
+  ev.preventDefault();
+  const amount=Math.round(parseFloat($('dAmount').value)*100)/100;if(!(amount>0))return;
+  entries.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),type:'daily',amount,date:day,note:$('dNote').value.trim(),category:$('dCat').value});
+  save();$('dAmount').value='';$('dNote').value='';$('dAmount').focus();renderDaily();
+});
+$('dayList').addEventListener('click',e=>{const id=e.target.dataset.id;if(id){entries=entries.filter(x=>x.id!==id);save();renderDaily()}});
+$('dayHistory').addEventListener('click',e=>{const li=e.target.closest('[data-day]');if(li){day=li.dataset.day;renderDaily();window.scrollTo({top:0,behavior:'smooth'})}});
+
+$('date').value=today;upd();show();
