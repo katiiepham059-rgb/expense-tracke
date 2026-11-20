@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expense Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Playfair+Display:ital,wght@1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="deco" aria-hidden="true">🌷 🌼 🌸</div>
+  <h1><em>the</em> expense tracker</h1>
+  <div class="month-nav">
+    <button id="prev" aria-label="Previous month">‹</button>
+    <strong id="monthLabel"></strong>
+    <button id="next" aria-label="Next month">›</button>
+  </div>
+</header>
+
+<main>
+  <section class="cards" id="cards"></section>
+
+  <section class="panel">
+    <h2>Add entry</h2>
+    <form id="form">
+      <label>Type
+        <select id="type">
+          <option value="earning">Earning (weekly income)</option>
+          <option value="monthly">Monthly payment (recurring)</option>
+          <option value="saving">Savings</option>
+          <option value="daily">Daily payment</option>
+          <option value="unexpected">Unexpected charge</option>
+        </select>
+      </label>
+      <label>Amount ($)
+        <input id="amount" type="number" min="0.01" step="0.01" required placeholder="0.00">
+      </label>
+      <label>Date
+        <input id="date" type="date" required>
+      </label>
+      <label>Note
+        <input id="note" type="text" maxlength="80" placeholder="e.g. Rent, Groceries, Car repair">
+      </label>
+      <button type="submit" class="primary">Add</button>
+    </form>
+    <p id="hint" class="muted"></p>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>Weekly earnings (last 8 weeks)</h2>
+      <div id="weekChart"></div>
+    </div>
+    <div class="panel">
+      <h2>Spending breakdown</h2>
+      <div id="donut"></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <h2>Savings goal</h2>
+      <label class="inline">Monthly goal ($)
+        <input id="goal" type="number" min="0" step="1" placeholder="0">
+      </label>
+    </div>
+    <div class="bar"><div id="goalFill"></div></div>
+    <p id="goalText" class="muted"></p>
+  </section>
+
+  <section class="panel">
+    <div class="row">
+      <h2>Entries</h2>
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <ul id="list" class="list"></ul>
+  </section>
+
+  <section class="panel actions">
+    <button id="exportCsv">Export CSV</button>
+    <button id="exportJson">Backup (JSON)</button>
+    <label class="btn">Restore <input id="importJson" type="file" accept="application/json" hidden></label>
+    <button id="clearAll" class="danger">Clear all</button>
+  </section>
+</main>
+<footer class="scallop-top">Data is stored only in your browser (localStorage).</footer>
+<script src="app.js"></script>
+</body>
+</html>
